@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!--load d3.js-->
+<script src="https://d3js.org/d3.v6.js"></script>
+
+<div id="chart">
+</div>
+
+<script>
+    //set the dimensions and margins of the graph
+    const margin = {
+            top: 50,
+            right: 50,
+            bottom: 50,
+            left: 50
+        },
+        width = 800 - margin.left - margin.right,
+        height = 600 - margin.top - margin.bottom;
+
+    const svg = d3.select("#chart")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+    d3.csv("global_development_filtered.csv", function(d) {
+        return {
+            country: d["Country"],
+            birth: +d['Data.Health.Birth Rate'],
+            death: +d['Data.Health.Death Rate'],
+            population: +d['Data.Health.Total Population'],
+            fertility: +d['Data.Health.Fertility Rate']
+        };
+    }).then(function(data) {
+        console.log(data);
+
+        //Part 3: Establishing Scales
+        const x = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.birth)])
+            .range([0, width]);
+
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.death)])
+            .range([height, 0]);
+
+        const color = d3.scaleSequential()
+            .domain(d3.extent(data, d => d.population))
+            .interpolator(d3.interpolateCool)
+
+        //Append group and insert axis
+        svg.append("g")
+            .attr("transform", `translate(0, ${height})`)
+            .call(d3.axisBottom(x));
+
+        svg.append("g")
+            .call(d3.axisLeft(y));
+
+        //add dots
+        //attr() function is used to set the attribute of the element that is selected.
+        // all action will be written here
+        svg.append('g')
+            .selectAll("dot")
+            .data(data)
+            .join("circle")
+            .attr("r", function(d) {
+                return (d.fertility);
+            })
+            .attr("cx", function(d) {
+                return x(d.birth);
+            })
+            .attr("cy", function(d) {
+                return y(d.death);
+            })
+            .style("fill", function(d) {
+                return color(d.population);
+            })
+            .style("opacity", 0.5)
+            .on("click", function(e, d) {
+                //  return console.log(d.country);
+                return d3.selectAll("circle")
+                    .style("opacity", function(d2) {
+                        if (d.country == d2.country) {
+                            return 1;
+                        } else {
+                            return 0.1;
+                        }
+                    })
+                    .style("r", function(d2) {
+                        if (d.country == d2.country) {
+                            return 12;
+                        } else {
+                            return 4;
+                        }
+                    })
+
+            }).on("mouseover", function(e, d) {
+                return tooltip.style("visibility", "visible")
+                    .html("Country: " + d.country);
+            })
+            .on("mousemove", function() {
+                return tooltip.style("top", d3.select(this)
+                    .attr("cy") + "px").style("left", d3.select(this).attr("cx") + "px")
+            })
+            .on("mouseout", function() {
+                return tooltip.style("visibility", "hidden");
+            })
+
+        //Specify the tooltip location
+        var tooltip = d3.select("#chart")
+            .append("div")
+            .style("position", "absolute")
+            .style("visibility", "hidden")
+            .style("background-color", "lightgrey")
+
+
+    })
+</script>
